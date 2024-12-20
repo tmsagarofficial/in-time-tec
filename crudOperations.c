@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
-#include<conio.h>
+#include <conio.h>
 
 #define MAX_NAME_LENGTH 15
 #define MAX_FILENAME_LENGTH 15
@@ -16,25 +15,24 @@ typedef struct
     int userAge;
 } User;
 
-bool checkFileExists(const char *filename);
+int checkFileExists(const char *filename);
 void createFile(const char *filename);
 void addUser(const char *filename);
 void displayUsers(const char *filename);
-bool updateUser(const char *filename, int userIdToUpdate);
-bool deleteUser(const char *filename, int userIdToDelete);
+int updateUser(const char *filename, int userIdToUpdate);
+int deleteUser(const char *filename, int userIdToDelete);
 
-bool checkFileExists(const char *filename)
+int checkFileExists(const char *filename)
 {
     FILE *file = fopen(filename, "r");
     if (file)
     {
         fclose(file);
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
-// Creating a new file if it doesn't exist.
 void createFile(const char *filename)
 {
     FILE *file = fopen(filename, "a");
@@ -46,7 +44,6 @@ void createFile(const char *filename)
     fclose(file);
 }
 
-// Adding a new user to the file.
 void addUser(const char *filename)
 {
     User newUser;
@@ -78,10 +75,8 @@ void addUser(const char *filename)
     printf("User added successfully.\n");
 }
 
-// Displaying all the users read from the file.
 void displayUsers(const char *filename)
 {
-    system("cls");
     User currentUser;
     FILE *file = fopen(filename, "r");
     char line[100];
@@ -95,30 +90,25 @@ void displayUsers(const char *filename)
     printf("\nUser List:\n");
     printf("ID\tName\t\tAge\n\n");
 
-    bool isEmpty = true;
+    int isEmpty = 1;
     // Reading file and printing users.
     while (fgets(line, sizeof(line), file))
     {
-        isEmpty = false;
-        
+        isEmpty = 0;
         line[strcspn(line, "\n")] = 0;
-
-        
         char *token = strtok(line, ":");
+
         if (token)
         {
             currentUser.userId = atoi(token);
-
             token = strtok(NULL, ":");
             if (token)
             {
                 strcpy(currentUser.userName, token);
-
                 token = strtok(NULL, ":");
                 if (token)
                 {
                     currentUser.userAge = atoi(token);
-
                     printf("%d\t%s\t\t%d\n",
                            currentUser.userId,
                            currentUser.userName,
@@ -133,22 +123,20 @@ void displayUsers(const char *filename)
     fclose(file);
 }
 
-// Updating/Modifying a user's details in the file
-bool updateUser(const char *filename, int userIdToUpdate)
+int updateUser(const char *filename, int userIdToUpdate)
 {
-    FILE *originalFile = fopen(filename, "r");
-    FILE *tempFile = fopen("usersCopy.txt", "w");
+    FILE *file = fopen(filename, "r");
     char line[100];
     User currentUser;
-    bool userFound = false;
+    int userFound = 0;
+    char buffer[1000] = "";
 
-    if (originalFile == NULL || tempFile == NULL)
-    {
+    if (file == NULL){
         printf("Error: Unable to open files for updating.\n");
-        return false;
+        return 0;
     }
 
-    while (fgets(line, sizeof(line), originalFile))
+    while (fgets(line, sizeof(line), file))
     {
         line[strcspn(line, "\n")] = 0;
 
@@ -157,105 +145,88 @@ bool updateUser(const char *filename, int userIdToUpdate)
 
         if (currentUser.userId == userIdToUpdate)
         {
-            userFound = true;
-
+            userFound = 1;
             printf("Enter new Name: ");
             scanf("%s", currentUser.userName);
-
             printf("Enter new Age: ");
             scanf("%d", &currentUser.userAge);
-
-            fprintf(tempFile, "%d:%s:%d\n",
-                    currentUser.userId,
-                    currentUser.userName,
-                    currentUser.userAge);
+            sprintf(buffer, "%d:%s:%d\n", currentUser.userId, currentUser.userName, currentUser.userAge);
         }
         else
         {
-
-            token = strtok(NULL, ":");
-            strcpy(currentUser.userName, token);
-
-            token = strtok(NULL, ":");
-            currentUser.userAge = atoi(token);
-
-            fprintf(tempFile, "%d:%s:%d\n",
-                    currentUser.userId,
-                    currentUser.userName,
-                    currentUser.userAge);
+            strcat(buffer, line);
+            strcat(buffer, "\n");
         }
     }
 
-    fclose(originalFile);
-    fclose(tempFile);
+    fclose(file);
 
-    remove(filename);
-    rename("usersCopy.txt", filename);
+    file = fopen(filename, "w");
+    if (file == NULL){
+        printf("Error: Unable to open files for updating.\n");
+        return 0;
+    }
 
-    if (userFound)
-    {
+    fprintf(file, "%s", buffer);
+    fclose(file);
+
+    if (userFound==1)  {
         system("cls");
         printf("User updated successfully.\n");
     }
-    else
-    {
+    else    {
         printf("User with ID %d not found.\n", userIdToUpdate);
     }
 
-    return userFound;
+    return userFound==1;
 }
 
-// Deleting a user record by ID in the file.
-bool deleteUser(const char *filename, int userIdToDelete)
+int deleteUser(const char *filename, int userIdToDelete)
 {
-    FILE *originalFile = fopen(filename, "r");
-    FILE *tempFile = fopen("usersCopy.txt", "w");
+    FILE *file = fopen(filename, "r+");
     char line[100];
     User currentUser;
-    bool userFound = false;
+    int userFound = 0;
+    int lineNumber = 0;
 
-    if (originalFile == NULL || tempFile == NULL)
+    if (file == NULL)
     {
         printf("Error: Unable to open files for deletion.\n");
-        return false;
+        return 0;
     }
 
-    while (fgets(line, sizeof(line), originalFile))
+    // Find the line number of the user to be deleted
+    while (fgets(line, sizeof(line), file))
     {
-
         line[strcspn(line, "\n")] = 0;
-
         char *token = strtok(line, ":");
         currentUser.userId = atoi(token);
 
-        if (currentUser.userId != userIdToDelete)
+        if (currentUser.userId == userIdToDelete)
         {
-
-            token = strtok(NULL, ":");
-            strcpy(currentUser.userName, token);
-
-            token = strtok(NULL, ":");
-            currentUser.userAge = atoi(token);
-
-            fprintf(tempFile, "%d:%s:%d\n",
-                    currentUser.userId,
-                    currentUser.userName,
-                    currentUser.userAge);
+            userFound = 1;
+            break;
         }
-        else
-        {
-            userFound = true;
-        }
+
+        lineNumber++;
     }
-
-    fclose(originalFile);
-    fclose(tempFile);
-
-    remove(filename);
-    rename("usersCopy.txt", filename);
 
     if (userFound)
     {
+        fseek(file, -strlen(line) - 1, SEEK_CUR);
+        char buffer[1000] = "";
+        fgets(line, sizeof(line), file);
+        strcat(buffer, line);
+
+        while (fgets(line, sizeof(line), file))
+        {
+            strcat(buffer, line);
+        }
+
+        rewind(file);
+        fprintf(file, "%s", buffer);
+        fseek(file, 0, SEEK_END);
+        fprintf(file, "\n");
         system("cls");
         printf("User deleted successfully.\n");
     }
@@ -264,23 +235,22 @@ bool deleteUser(const char *filename, int userIdToDelete)
         printf("User with ID %d not found.\n", userIdToDelete);
     }
 
-    return userFound;
+    fclose(file);
+
+    return userFound==1;
 }
 
 int main()
 {
     const char *filename = "users.txt";
     int choice, userId;
+    int runnning = 1;
 
-    // Create file if it doesn't exist
-    if (!checkFileExists(filename))
-    {
+    if (!checkFileExists(filename))    {
         createFile(filename);
     }
-
-    while (1)
-    {
-        system("cls");
+    do    {
+        
         printf("\nUser Management System\n");
         printf("1. Add User\n");
         printf("2. Display Users\n");
@@ -311,11 +281,12 @@ int main()
             deleteUser(filename, userId);
             break;
         case 5:
-            return 0;
+            runnning = 0;
+            break;
         default:
             printf("Invalid choice. Please try again.\n");
         }
-    }
+    } while (runnning);
 
     return 0;
 }
